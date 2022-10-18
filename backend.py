@@ -1,11 +1,21 @@
 #!/usr/bin/python
 
 from flask import Flask
-from flask import jsonify, render_template
+from flask import jsonify, render_template, request
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from flask_cors import CORS
+
+import sqlite3
+
+def dict_factory(cursor, row):
+    col_names = [col[0] for col in cursor.description]
+    return {key: value for key, value in zip(col_names, row)}
+
+con = sqlite3.connect("dangers.db", check_same_thread=False) 
+con.row_factory = dict_factory
+cur = con.cursor()
 
 
 app = Flask(__name__,
@@ -40,25 +50,24 @@ def home():
 
 
 
-
-
-
-
 @app.route('/api/dangers', methods=['GET'])
 @auth.login_required
 def get_dangers():
 
-    return jsonify([
-            {'lat': 50.257302985794446, 'lng': 18.97321701049805},
-            {'lat': 50.26630164859335, 'lng': 19.061965942382816}
-        ])
-    # return jsonify({'asd': 'efg'})
+    res = cur.execute('select * from dangers')
+    
+    return jsonify(res.fetchall())
 
 
 @app.route('/api/dangers', methods=['POST'])
 @auth.login_required
 def add_danger():
-    pass
+    data = request.json
+    
+    cur.execute("INSERT INTO dangers(level, desc, lat,lng) VALUES(?, ?, ?, ?)", [data['level'], data['desc'], data['lat'], data['lng']])
+    con.commit()
+
+    return jsonify({})
 
 
 if __name__ == '__main__':
