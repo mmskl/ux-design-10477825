@@ -1,0 +1,11 @@
+#map-container {
+    padding-top: 20px;
+}
+
+.danger-on-map {
+    font-size: 12px
+}
+
+.danger-on-map-high { color: red}
+.danger-on-map-medium {color: orange}
+.danger-on-map-low {color: green}
