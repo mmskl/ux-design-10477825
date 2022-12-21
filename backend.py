@@ -3,7 +3,7 @@
 from flask import Flask
 from flask import jsonify, render_template, request, redirect, url_for, flash
 from flask_httpauth import HTTPDigestAuth
-from flask_login import LoginManager, login_required, logout_user, login_user
+from flask_login import LoginManager, login_required, logout_user, login_user, current_user
 from sys import exit
 
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -38,9 +38,9 @@ def unauthorized():
 class User():
     def __init__(self, user_id, username='anonymous'):
         self.id = user_id
-        # self.username = username
+        self.username = username
     @property
-    def username(self):
+    def get_username(self):
         return self.username
     @property
     def is_authenticated(self):
@@ -62,12 +62,6 @@ def load_user(user_id):
     res = cur.execute('select id, username from users where id=?', [ user_id ])
     r = res.fetchone()
     return User(r['id'], r['username'])
-
-def get_user():
-    username = 'joshn'
-    res = cur.execute('select id, username from users where username=?', [ username ])
-    return res.fetchone()
-
 
 
 def verify_password(username, password):
@@ -119,6 +113,7 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         result =  verify_password(username, password)
+        print('result', result)
         if result != None:
             login_user(result)
             flash('Zalogowałeś się!')
@@ -139,9 +134,10 @@ def get_dangers():
 
 
 @app.route('/api/dangers', methods=['POST'])
+@login_required
 def add_danger():
     data = request.json
-    print('adding danger')
+    username = current_user.get_username
     cur.execute("INSERT INTO dangers(level, desc, lat,lng, username) VALUES(?, ?, ?, ?, ?)",
             [data['level'], data['desc'], data['lat'], data['lng'], username])
 
