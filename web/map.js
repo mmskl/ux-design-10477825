@@ -42,11 +42,13 @@ async function postData(url = '', data = {}) {
     return response.json(); // parses JSON response into native JavaScript objects
 }
 
+
 function addMultipleMarkersToMap(data) {
     for(d of data) {
         addMarkerToMap(d['lat'], d['lng'], d['desc'], d['level'], d['username']);
     }
 }
+
 
 function addMarkerToMap(lat, lng, desc, level, username) {
 
@@ -54,13 +56,6 @@ function addMarkerToMap(lat, lng, desc, level, username) {
         .bindPopup(`<p class="danger-on-map danger-on-map-${level}">${desc}</p>
                     <p class="danger-on-map">dodane przez: ${username} </p>
             `);
-}
-
-async function getUser() {
-    var response = await fetch('/api/user')
-        .then((response) => response.json())
-
-    return response['username']
 }
 
 function apiAddDanger(lat, lng) {
@@ -71,7 +66,6 @@ function apiAddDanger(lat, lng) {
         'lat': lat, 'lng': lng
     }
     postData('/api/dangers', data)
-    username = getUser()
     addMarkerToMap(data['lat'], data['lng'], data['desc'], data['level'], username)
     map.closePopup();
 }
