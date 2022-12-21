@@ -9,3 +9,5 @@
 .danger-on-map-high { color: red}
 .danger-on-map-medium {color: orange}
 .danger-on-map-low {color: green}
+
+.alert-primary { background-color: lightblue }

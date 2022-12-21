@@ -25,48 +25,48 @@
 
   <body>
 
+
+
+
+
       <div class="container">
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-primary" role="alert">
+      {{ message }}
+    </div>
+    {% endfor %}
+{% endif %}
+{% endwith %}
 
         <nav class="navbar navbar-default">
           <div class="container-fluid">
             <div class="navbar-header">
-              <a class="navbar-brand" href="#">Zagrożenia</a>
+              <a class="navbar-brand" href="/">Zagrożenia</a>
             </div>
             <ul class="nav navbar-nav">
-              <!-- <li><a href="#">Lista zagrożeń</a></li> -->
-              <!-- <li><a href="#">Dodaj zagrożenie</a></li> -->
               <li class="active"><a href="#">Mapa</a></li>
-              <!-- <li><a href="/users">Users</a></li> -->
             </ul>
 
         <!-- <h1>xx</h1> -->
 
 
+        {% if not current_user.is_authenticated %}
 	    <ul style="float: right;" class="nav navbar-nav ml-auto">
-		    <!-- <li><a href="#" onClick="document.execCommand('ClearAuthenticationCache');">Wyloguj</a></li> -->
-        {% if not user %}
-              <li><a href="/register">Zarejestruj się</a></li>
-              <li><a href="/register">Zaloguj</a></li>
-        {% else %}
-              <!-- <li><a href="http://a:b@localhost:5000/">Wyloguj</a></li> -->
-
-        {% endif %}
+                <li><a href="/register">Zarejestruj się</a></li>
+                <li><a href="/login">Zaloguj</a></li>
 	    </ul>
+        {% else %}
+	    <ul style="float: right;" class="nav navbar-nav ml-auto">
+
+            <li><a href="#">Zalogowany jako: <b>{{ current_user.username }}</b></a></li>
+            <li><a href="/logout">Wyloguj</a></li>
+	    </ul>
+        {% endif %}
 
           </div>
         </nav>
-
-        <!-- <div class="row"> -->
-        <!--     <div class="col-lg-12"> -->
-        <!--         <div class="input-group"> -->
-        <!--             <input type="text" class="form-control" placeholder="Search for..."> -->
-        <!--             <span class="input-group-btn"> -->
-        <!--                 <button class="btn btn-secondary" type="button" onclick="searchPlace()">Go!</button> -->
-        <!--             </span> -->
-        <!--         </div> -->
-        <!--     </div> -->
-
-        <!-- </div> -->
 
         <div class="row">
 
