@@ -1,11 +1,9 @@
 #!/usr/bin/python
 
 from flask import Flask
-from flask import jsonify, render_template, request
+from flask import jsonify, render_template, request, redirect, url_for
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import generate_password_hash, check_password_hash
-
-from flask_cors import CORS
 
 import sqlite3
 
@@ -23,35 +21,74 @@ app = Flask(__name__,
             static_folder='web',
             template_folder='web')
 
-CORS(app)
-
 auth = HTTPBasicAuth()
 
-users = {
-    "john": generate_password_hash("john1"),
-    "susan": generate_password_hash("susan1")
-}
-
+def get_user():
+    username = auth.username()
+    res = cur.execute('select id, username from users where username=?', [ username ])
+    return res.fetchone()
 
 @auth.verify_password
 def verify_password(username, password):
-    if username in users and \
-            check_password_hash(users.get(username), password):
+
+    if username == "admin" and password == "admin":
+        return "admin"
+
+    res = cur.execute('select username, hash from users where username=?', [ username ])
+    u = res.fetchone()
+
+    if u and check_password_hash(u['hash'], password):
         return username
+
+    return False
+
+
+
+@app.route('/logout')
+def logout():
+    return '', 401
 
 
 @app.route('/')
-@auth.login_required
 def home():
-   return render_template('index.html')
+    u = auth.username()
+    return render_template('index.html', user=u)
+
+
+@app.route('/users')
+@auth.login_required
+def users_list():
+    users = [
+            {'id':1, 'username':'john'}
+            ]
+    return render_template('users.html', users=users)
 
 
 
+@app.route('/register')
+def register():
+    return render_template('register.html')
+
+
+
+@app.route('/register', methods=['POST'])
+@auth.login_required
+def register_send():
+    if request.method == 'POST' and 'username' in request.form and 'password' in request.form:
+        username = request.form.get('username')
+        password = request.form.get('password')
+        password_hash = generate_password_hash(password)
+        sql = "INSERT INTO users (username, hash) VALUES (?, ?);"
+        cur.execute(sql, (username, password_hash))
+        con.commit()
+
+        return redirect(url_for('home'))
+
+    return render_template('register.html')
 
 
 
 @app.route('/api/dangers', methods=['GET'])
-@auth.login_required
 def get_dangers():
 
     res = cur.execute('select * from dangers')
@@ -59,12 +96,26 @@ def get_dangers():
     return jsonify(res.fetchall())
 
 
+@app.route('/api/login')
+@auth.login_required
+def login():
+    return jsonify({})
+
+
+@app.route('/api/user')
+def user():
+    return jsonify({'username': auth.username()})
+
+
 @app.route('/api/dangers', methods=['POST'])
 @auth.login_required
 def add_danger():
     data = request.json
-    
-    cur.execute("INSERT INTO dangers(level, desc, lat,lng) VALUES(?, ?, ?, ?)", [data['level'], data['desc'], data['lat'], data['lng']])
+    username = auth.username()
+    print('adding danger')
+    cur.execute("INSERT INTO dangers(level, desc, lat,lng, username) VALUES(?, ?, ?, ?, ?)",
+            [data['level'], data['desc'], data['lat'], data['lng'], username])
+
     con.commit()
 
     return jsonify({})
