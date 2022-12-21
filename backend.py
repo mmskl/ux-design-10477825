@@ -1,8 +1,11 @@
 #!/usr/bin/python
 
 from flask import Flask
-from flask import jsonify, render_template, request, redirect, url_for
-from flask_httpauth import HTTPBasicAuth
+from flask import jsonify, render_template, request, redirect, url_for, flash
+from flask_httpauth import HTTPDigestAuth
+from flask_login import LoginManager, login_required, logout_user, login_user
+from sys import exit
+
 from werkzeug.security import generate_password_hash, check_password_hash
 
 import sqlite3
@@ -21,58 +24,81 @@ app = Flask(__name__,
             static_folder='web',
             template_folder='web')
 
-auth = HTTPBasicAuth()
+app.secret_key = b'_5#2"4aslkdj23u8xec]/'
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    return redirect(url_for('login'))
+
+
+class User():
+    def __init__(self, user_id, username='anonymous'):
+        self.id = user_id
+        # self.username = username
+    @property
+    def username(self):
+        return self.username
+    @property
+    def is_authenticated(self):
+        return self.is_active
+    @property
+    def is_active(self):
+        return True
+    def is_anonymous(self):
+        return True
+
+    def get_id(self):
+        try:
+            return str(self.id)
+        except AttributeError:
+            raise NotImplementedError("No `id` attribute - override `get_id`") from None
+
+@login_manager.user_loader
+def load_user(user_id):
+    res = cur.execute('select id, username from users where id=?', [ user_id ])
+    r = res.fetchone()
+    return User(r['id'], r['username'])
 
 def get_user():
-    username = auth.username()
+    username = 'joshn'
     res = cur.execute('select id, username from users where username=?', [ username ])
     return res.fetchone()
 
-@auth.verify_password
+
+
 def verify_password(username, password):
 
-    if username == "admin" and password == "admin":
-        return "admin"
+    # if username == "admin" and password == "admin":
+    #     return "admin"
 
-    res = cur.execute('select username, hash from users where username=?', [ username ])
+    res = cur.execute('select id, username, hash from users where username=?', [ username ])
     u = res.fetchone()
 
     if u and check_password_hash(u['hash'], password):
-        return username
+        return User(u['id'], u['username'])
 
-    return False
+    return None
 
 
 
-@app.route('/logout')
+@app.route("/logout")
+@login_required
 def logout():
-    return '', 401
+    logout_user()
+    return redirect(url_for('home'))
 
 
 @app.route('/')
 def home():
-    u = auth.username()
-    return render_template('index.html', user=u)
-
-
-@app.route('/users')
-@auth.login_required
-def users_list():
-    users = [
-            {'id':1, 'username':'john'}
-            ]
-    return render_template('users.html', users=users)
+    return render_template('index.html')
 
 
 
-@app.route('/register')
-def register():
-    return render_template('register.html')
-
-
-
-@app.route('/register', methods=['POST'])
-@auth.login_required
+@app.route('/register', methods=['POST', 'GET'])
 def register_send():
     if request.method == 'POST' and 'username' in request.form and 'password' in request.form:
         username = request.form.get('username')
@@ -87,6 +113,22 @@ def register_send():
     return render_template('register.html')
 
 
+@app.route('/login', methods=['POST', 'GET'])
+def login():
+    if request.method == 'POST' and 'username' in request.form and 'password' in request.form:
+        username = request.form.get('username')
+        password = request.form.get('password')
+        result =  verify_password(username, password)
+        if result != None:
+            login_user(result)
+            flash('Zalogowałeś się!')
+            return redirect(url_for('home'))
+
+        flash('Hasło/Użytkownik nieprawidłowy')
+    return render_template('login.html')
+
+
+
 
 @app.route('/api/dangers', methods=['GET'])
 def get_dangers():
@@ -96,22 +138,9 @@ def get_dangers():
     return jsonify(res.fetchall())
 
 
-@app.route('/api/login')
-@auth.login_required
-def login():
-    return jsonify({})
-
-
-@app.route('/api/user')
-def user():
-    return jsonify({'username': auth.username()})
-
-
 @app.route('/api/dangers', methods=['POST'])
-@auth.login_required
 def add_danger():
     data = request.json
-    username = auth.username()
     print('adding danger')
     cur.execute("INSERT INTO dangers(level, desc, lat,lng, username) VALUES(?, ?, ?, ?, ?)",
             [data['level'], data['desc'], data['lat'], data['lng'], username])
